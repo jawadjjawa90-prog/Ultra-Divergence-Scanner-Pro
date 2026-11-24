@@ -1,0 +1,749 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Binance All USDT Hidden Bullish Scanner</title>
+
+<script src="https://s3.tradingview.com/tv.js"></script>
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0;font-family:Arial,sans-serif}
+body{background:#0b0e14;color:#e2e8f0;padding:10px}
+.top-banner,.controls-bar,.status-strip,.sidebar,.chart-panel{
+ background:#131722;border:1px solid #2a2e39;border-radius:8px;margin-bottom:10px
+}
+.top-banner{padding:12px;display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+h1{font-size:18px;color:#fff}
+.top-banner p{font-size:12px;color:#a5b4fc;margin-top:4px}
+.live-badge{color:#34d399;border:1px solid #10b981;padding:5px 10px;border-radius:20px;font-size:12px}
+.controls-bar{padding:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.input-group{background:#1e222d;padding:6px 9px;border-radius:6px;font-size:12px;color:#aaa}
+.input-group input{width:42px;background:none;border:0;color:white;text-align:center;outline:none}
+.controls-bar input[type=text],select{
+ background:#1e222d;color:white;border:1px solid #363a45;padding:8px;border-radius:6px
+}
+.btn{padding:8px 13px;border:0;border-radius:6px;font-weight:bold;color:white;cursor:pointer}
+.btn-scan{background:#2563eb}
+.btn-reset{background:#dc2626}
+.stats-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:10px}
+.stat-card{padding:12px;border-radius:8px;color:white}
+.stat-card span{font-size:11px;display:block}
+.stat-card h2{font-size:22px;margin-top:3px}
+.card-blue{background:#1d4ed8}
+.card-purple{background:#6d28d9}
+.card-green{background:#059669}
+.card-orange{background:#d97706}
+.status-strip{padding:9px;color:#6ee7b7;background:#064e3b;display:flex;justify-content:space-between;gap:8px;flex-wrap:wrap;font-size:12px}
+.main-workspace{display:grid;grid-template-columns:330px 1fr;gap:10px;height:570px}
+.sidebar,.chart-panel{margin:0;overflow:hidden;display:flex;flex-direction:column}
+.sidebar-header,.chart-header{padding:11px;background:#1e222d;color:#38bdf8;font-size:13px;font-weight:bold;display:flex;justify-content:space-between}
+.table-head,.coin-item{display:grid;grid-template-columns:1fr .8fr 1fr;gap:5px;padding:9px 10px}
+.table-head{background:#181c27;color:#94a3b8;font-size:11px}
+.coin-list{overflow:auto;flex:1}
+.coin-item{font-size:13px;border-bottom:1px solid #252a35;cursor:pointer}
+.coin-item:hover,.coin-item.active{background:#1e3a8a}
+.coin-sym{color:#60a5fa;font-weight:bold}
+.coin-rsi{color:#fbbf24}
+.signal-tag{color:#4ade80;font-size:10px;font-weight:bold}
+#tv_chart_container{flex:1;min-height:300px}
+@media(max-width:800px){
+ .stats-grid{grid-template-columns:repeat(2,1fr)}
+ .main-workspace{grid-template-columns:1fr;height:auto}
+ .sidebar{height:300px}
+ .chart-panel{height:450px}
+}
+</style>
+</head>
+
+<body>
+
+<div class="top-banner">
+ <div>
+  <h1>Binance All USDT Hidden Bullish Scanner</h1>
+  <p>All Active Spot USDT Pairs | Hidden Bullish Divergence | RSI 25–40</p>
+ </div>
+ <div class="live-badge">AUTO SCAN: <span id="timerBadge">12s</span></div>
+</div>
+
+<div class="controls-bar">
+
+ <div class="input-group">
+  Min RSI:
+  <input type="number" id="minRsiInput" value="25">
+ </div>
+
+ <div class="input-group">
+  Max RSI:
+  <input type="number" id="maxRsiInput" value="40">
+ </div>
+
+ <input type="text" id="searchInput" placeholder="Search Coin..." oninput="filterList()">
+
+ <select id="timeframeSelect">
+  <option value="15m">15 Minutes</option>
+  <option value="30m">30 Minutes</option>
+  <option value="1h" selected>1 Hour</option>
+  <option value="4h">4 Hours</option>
+ </select>
+
+ <button class="btn btn-scan" onclick="startFastScan()">START SCAN</button>
+ <button class="btn btn-reset" onclick="resetScanner()">RESET</button>
+
+</div>
+
+<div class="stats-grid">
+ <div class="stat-card card-blue">
+  <span>Total USDT Coins</span>
+  <h2 id="totalCount">0</h2>
+ </div>
+
+ <div class="stat-card card-purple">
+  <span>Scanned</span>
+  <h2 id="scannedCount">0</h2>
+ </div>
+
+ <div class="stat-card card-green">
+  <span>Valid Signals</span>
+  <h2 id="signalsCount">0</h2>
+ </div>
+
+ <div class="stat-card card-orange">
+  <span>Remaining</span>
+  <h2 id="remainingCount">0</h2>
+ </div>
+</div>
+
+<div class="status-strip">
+ <span id="statusMessage">Connecting to Binance Spot Market...</span>
+ <span id="timerText">Next Scan: 12 seconds</span>
+</div>
+
+<div class="main-workspace">
+
+ <div class="sidebar">
+  <div class="sidebar-header">
+   <span>Hidden Bullish Signals</span>
+   <span id="sidebarBadge">0 Found</span>
+  </div>
+
+  <div class="table-head">
+   <span>Coin</span>
+   <span>RSI</span>
+   <span>Signal</span>
+  </div>
+
+  <div class="coin-list" id="signalsList"></div>
+ </div>
+
+ <div class="chart-panel">
+  <div class="chart-header">
+   <span id="chartTitle">TradingView — BTCUSDT (1H)</span>
+   <span>RSI 14 Only</span>
+  </div>
+
+  <div id="tv_chart_container"></div>
+ </div>
+
+</div>
+
+<script>
+
+// BINANCE API SERVERS
+const API_ENDPOINTS=[
+ 'https://api.binance.com',
+ 'https://api1.binance.com',
+ 'https://api2.binance.com',
+ 'https://api3.binance.com'
+];
+
+let activeBaseUrl=API_ENDPOINTS[0];
+
+let isScanning=false;
+let scanAgain=false;
+let scanGeneration=0;
+let countdownTimer=null;
+
+let selectedCoin='BTCUSDT';
+let allSignals=[];
+const REFRESH_SECONDS=12;
+const CONCURRENCY=12;
+
+
+// TRADINGVIEW CHART
+function loadTradingViewChart(symbol){
+
+ selectedCoin=symbol;
+
+ const tf=document.getElementById('timeframeSelect').value;
+
+ const intervals={
+  '15m':'15',
+  '30m':'30',
+  '1h':'60',
+  '4h':'240'
+ };
+
+ document.getElementById('chartTitle').textContent=
+  'TradingView — '+symbol+' ('+tf.toUpperCase()+')';
+
+ document.querySelectorAll('.coin-item').forEach(el=>{
+  el.classList.toggle('active',el.dataset.symbol===symbol);
+ });
+
+ const container=document.getElementById('tv_chart_container');
+ container.innerHTML='';
+
+ function createWidget(){
+
+  if(typeof TradingView==='undefined'){
+   container.textContent='TradingView is loading...';
+   return;
+  }
+
+  new TradingView.widget({
+   autosize:true,
+   symbol:'BINANCE:'+symbol,
+   interval:intervals[tf]||'60',
+   timezone:'Etc/UTC',
+   theme:'dark',
+   style:'1',
+   locale:'en',
+   enable_publishing:false,
+   hide_side_toolbar:false,
+   allow_symbol_change:true,
+
+   // RSI ONLY - DISABLE DEFAULT VOLUME
+   studies:['RSI@tv-basicstudies'],
+   disabled_features:[
+    'create_volume_indicator_by_default'
+   ],
+
+   container_id:'tv_chart_container'
+  });
+ }
+
+ if(typeof TradingView!=='undefined'){
+  createWidget();
+ }else{
+  const script=document.createElement('script');
+  script.src='https://s3.tradingview.com/tv.js';
+  script.onload=createWidget;
+  container.textContent='Loading TradingView...';
+  document.head.appendChild(script);
+ }
+}
+
+
+// RSI CALCULATION
+function calculateRSI(closes,period=14){
+
+ const len=closes.length;
+ const result=new Array(len).fill(null);
+
+ if(len<=period)return result;
+
+ let gain=0;
+ let loss=0;
+
+ for(let i=1;i<=period;i++){
+
+  const diff=closes[i]-closes[i-1];
+
+  if(diff>0)gain+=diff;
+  else loss-=diff;
+ }
+
+ let avgGain=gain/period;
+ let avgLoss=loss/period;
+
+ result[period]=avgLoss===0
+  ?100
+  :100-(100/(1+avgGain/avgLoss));
+
+ for(let i=period+1;i<len;i++){
+
+  const diff=closes[i]-closes[i-1];
+
+  const currentGain=Math.max(diff,0);
+  const currentLoss=Math.max(-diff,0);
+
+  avgGain=(avgGain*(period-1)+currentGain)/period;
+  avgLoss=(avgLoss*(period-1)+currentLoss)/period;
+
+  result[i]=avgLoss===0
+   ?100
+   :100-(100/(1+avgGain/avgLoss));
+ }
+
+ return result;
+}
+
+
+// CANDLE BODY LOW
+function bodyLow(k){
+ return Math.min(Number(k[1]),Number(k[4]));
+}
+
+function bodyHigh(k){
+ return Math.max(Number(k[1]),Number(k[4]));
+}
+
+
+// HIDDEN BULLISH DIVERGENCE
+function checkHiddenBullish(klines,minRsi,maxRsi){
+
+ const len=klines.length;
+
+ if(!Array.isArray(klines)||len<40)return null;
+
+ const closes=klines.map(k=>Number(k[4]));
+ const rsi=calculateRSI(closes,14);
+
+ // LAST CLOSED CANDLE
+ const curr=len-2;
+
+ const currLow=bodyLow(klines[curr]);
+ const currRsi=rsi[curr];
+
+ if(currRsi===null||
+    currRsi<minRsi||
+    currRsi>maxRsi)return null;
+
+ // SEARCH PREVIOUS SWING LOW
+ for(let prev=curr-3;prev>=Math.max(15,curr-22);prev--){
+
+  const prevLow=bodyLow(klines[prev]);
+  const prevRsi=rsi[prev];
+
+  if(prevRsi===null)continue;
+
+  const beforeLow=bodyLow(klines[prev-1]);
+  const afterLow=bodyLow(klines[prev+1]);
+
+  // PREVIOUS CANDLE MUST BE A LOCAL LOW
+  if(prevLow>beforeLow||prevLow>afterLow)continue;
+
+  // HIDDEN BULLISH:
+  // PRICE HIGHER LOW
+  // RSI LOWER LOW
+
+  if(currLow<=prevLow)continue;
+  if(currRsi>=prevRsi)continue;
+
+  // CLEAN TRENDLINE BODY RULE
+  const slope=(currLow-prevLow)/(curr-prev);
+
+  let bodyCrossed=false;
+
+  for(let j=prev+1;j<curr;j++){
+
+   const linePrice=prevLow+slope*(j-prev);
+
+   const candleLow=bodyLow(klines[j]);
+   const candleHigh=bodyHigh(klines[j]);
+
+   // CANDLE BODY CROSSES TRENDLINE
+   if(candleLow<=linePrice&&candleHigh>=linePrice){
+    bodyCrossed=true;
+    break;
+   }
+  }
+
+  if(!bodyCrossed){
+
+   return {
+    rsi:currRsi.toFixed(2),
+    previousRsi:prevRsi.toFixed(2),
+    previousPrice:prevLow,
+    currentPrice:currLow
+   };
+
+  }
+ }
+
+ return null;
+}
+
+
+// FETCH JSON WITH TIMEOUT
+async function fetchJSON(url,timeout=12000){
+
+ const controller=new AbortController();
+
+ const timer=setTimeout(()=>{
+  controller.abort();
+ },timeout);
+
+ try{
+
+  const response=await fetch(url,{
+   signal:controller.signal,
+   cache:'no-store'
+  });
+
+  if(!response.ok){
+   throw new Error('HTTP '+response.status);
+  }
+
+  return await response.json();
+
+ }finally{
+  clearTimeout(timer);
+ }
+}
+
+
+// GET ALL ACTIVE BINANCE SPOT USDT PAIRS
+async function getAllUSDTCoins(){
+
+ for(const base of API_ENDPOINTS){
+
+  try{
+
+   const info=await fetchJSON(
+    base+'/api/v3/exchangeInfo',
+    15000
+   );
+
+   activeBaseUrl=base;
+
+   const coins=info.symbols.filter(s=>
+    s.status==='TRADING'&&
+    s.quoteAsset==='USDT'&&
+    s.isSpotTradingAllowed===true
+   );
+
+   // NO 320 COIN LIMIT
+   // NO QUOTE VOLUME FILTER
+   // ALL ACTIVE SPOT USDT PAIRS
+
+   return coins.map(s=>s.symbol);
+
+  }catch(error){
+   console.warn('Binance API failed:',base,error);
+  }
+ }
+
+ throw new Error('Unable to connect to Binance APIs');
+}
+
+
+// SCAN ONE COIN
+async function scanOne(symbol,tf,minRsi,maxRsi,generation){
+
+ try{
+
+  const url=activeBaseUrl+
+   '/api/v3/klines?symbol='+symbol+
+   '&interval='+tf+
+   '&limit=60';
+
+  const klines=await fetchJSON(url,15000);
+
+  if(generation!==scanGeneration)return null;
+
+  const signal=checkHiddenBullish(
+   klines,
+   minRsi,
+   maxRsi
+  );
+
+  if(signal){
+   return {
+    symbol,
+    ...signal
+   };
+  }
+
+  return null;
+
+ }catch(error){
+  return null;
+ }
+}
+
+
+// DISPLAY SIGNALS
+function renderSignals(){
+
+ const list=document.getElementById('signalsList');
+
+ list.innerHTML='';
+
+ allSignals.sort((a,b)=>Number(a.rsi)-Number(b.rsi));
+
+ const fragment=document.createDocumentFragment();
+
+ for(const item of allSignals){
+
+  const div=document.createElement('div');
+
+  div.className='coin-item';
+  div.dataset.symbol=item.symbol;
+
+  if(item.symbol===selectedCoin){
+   div.classList.add('active');
+  }
+
+  const coin=document.createElement('span');
+  coin.className='coin-sym';
+  coin.textContent=item.symbol;
+
+  const rsi=document.createElement('span');
+  rsi.className='coin-rsi';
+  rsi.textContent=item.rsi;
+
+  const signal=document.createElement('span');
+  signal.className='signal-tag';
+  signal.textContent='Hidden Bullish';
+
+  div.append(coin,rsi,signal);
+
+  div.addEventListener('click',()=>{
+   loadTradingViewChart(item.symbol);
+  });
+
+  fragment.appendChild(div);
+ }
+
+ list.appendChild(fragment);
+
+ document.getElementById('signalsCount').textContent=
+  allSignals.length;
+
+ document.getElementById('sidebarBadge').textContent=
+  allSignals.length+' Found';
+
+ filterList();
+}
+
+
+// SEARCH FILTER
+function filterList(){
+
+ const query=document
+  .getElementById('searchInput')
+  .value.toUpperCase();
+
+ document.querySelectorAll('.coin-item').forEach(el=>{
+
+  el.style.display=
+   el.dataset.symbol.includes(query)?'grid':'none';
+
+ });
+}
+
+
+// MAIN FAST SCANNER
+async function startFastScan(){
+
+ if(isScanning){
+  scanAgain=true;
+  return;
+ }
+
+ isScanning=true;
+ scanAgain=false;
+
+ const generation=++scanGeneration;
+
+ clearInterval(countdownTimer);
+
+ const tf=document.getElementById('timeframeSelect').value;
+
+ const minRsi=Number(
+  document.getElementById('minRsiInput').value
+ );
+
+ const maxRsi=Number(
+  document.getElementById('maxRsiInput').value
+ );
+
+ const status=document.getElementById('statusMessage');
+
+ if(!Number.isFinite(minRsi)||
+    !Number.isFinite(maxRsi)||
+    minRsi>=maxRsi){
+
+  status.textContent='Please enter valid RSI limits.';
+  isScanning=false;
+  scheduleAutoScan();
+  return;
+ }
+
+ allSignals=[];
+ renderSignals();
+
+ status.textContent='Loading all Binance USDT Spot pairs...';
+
+ try{
+
+  const coins=await getAllUSDTCoins();
+
+  if(generation!==scanGeneration)return;
+
+  const total=coins.length;
+
+  let scanned=0;
+  let nextIndex=0;
+
+  document.getElementById('totalCount').textContent=total;
+  document.getElementById('scannedCount').textContent='0';
+  document.getElementById('signalsCount').textContent='0';
+  document.getElementById('remainingCount').textContent=total;
+
+  status.textContent='Scanning all '+total+' USDT Spot pairs...';
+
+  async function worker(){
+
+   while(
+    nextIndex<total&&
+    generation===scanGeneration
+   ){
+
+    const index=nextIndex++;
+    const symbol=coins[index];
+
+    const signal=await scanOne(
+     symbol,
+     tf,
+     minRsi,
+     maxRsi,
+     generation
+    );
+
+    if(signal&&generation===scanGeneration){
+
+     allSignals.push(signal);
+     renderSignals();
+
+    }
+
+    scanned++;
+
+    document.getElementById('scannedCount').textContent=
+     scanned;
+
+    document.getElementById('remainingCount').textContent=
+     total-scanned;
+   }
+  }
+
+  const workers=Array.from(
+   {length:Math.min(CONCURRENCY,total)},
+   ()=>worker()
+  );
+
+  await Promise.all(workers);
+
+  if(generation===scanGeneration){
+
+   status.textContent=
+    'Scan completed! '+allSignals.length+' signals found from '+total+' pairs.';
+
+  }
+
+ }catch(error){
+
+  if(generation===scanGeneration){
+   status.textContent='Error: '+error.message;
+  }
+
+ }finally{
+
+  if(generation===scanGeneration){
+
+   isScanning=false;
+
+   if(scanAgain){
+    scanAgain=false;
+    startFastScan();
+   }else{
+    scheduleAutoScan();
+   }
+
+  }
+ }
+}
+
+
+// AUTO SCAN COUNTDOWN
+function scheduleAutoScan(){
+
+ clearInterval(countdownTimer);
+
+ let seconds=REFRESH_SECONDS;
+
+ document.getElementById('timerBadge').textContent=
+  seconds+'s';
+
+ document.getElementById('timerText').textContent=
+  'Next Auto-Scan in: '+seconds+'s';
+
+ countdownTimer=setInterval(()=>{
+
+  seconds--;
+
+  document.getElementById('timerBadge').textContent=
+   seconds+'s';
+
+  document.getElementById('timerText').textContent=
+   'Next Auto-Scan in: '+seconds+'s';
+
+  if(seconds<=0){
+
+   clearInterval(countdownTimer);
+
+   startFastScan();
+
+  }
+
+ },1000);
+}
+
+
+// RESET SCANNER
+function resetScanner(){
+
+ scanGeneration++;
+
+ isScanning=false;
+ scanAgain=false;
+
+ clearInterval(countdownTimer);
+
+ allSignals=[];
+
+ renderSignals();
+
+ document.getElementById('totalCount').textContent='0';
+ document.getElementById('scannedCount').textContent='0';
+ document.getElementById('signalsCount').textContent='0';
+ document.getElementById('remainingCount').textContent='0';
+
+ document.getElementById('statusMessage').textContent=
+  'Scanner reset.';
+
+ scheduleAutoScan();
+}
+
+
+// TIMEFRAME CHANGE
+document.getElementById('timeframeSelect')
+.addEventListener('change',()=>{
+
+ loadTradingViewChart(selectedCoin);
+ startFastScan();
+
+});
+
+
+// START
+loadTradingViewChart('BTCUSDT');
+startFastScan();
+
+</script>
+
+</body>
+</html>
